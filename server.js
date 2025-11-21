@@ -51,6 +51,9 @@ app.get('/:shortUrl', async (req, res) => {
 })
 
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`)
+const HOST = '0.0.0.0' // Required for Render - listens on all network interfaces
+
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 Server is running on http://${HOST}:${PORT}`)
+  console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`)
 })
