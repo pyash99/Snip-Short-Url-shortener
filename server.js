@@ -5,12 +5,54 @@ const app = express()
 
 // MongoDB connection - use environment variable in production, local in development
 const mongoUrl = process.env.MONGODB_URI || 'mongodb://localhost/urlShortener'
-mongoose.connect(mongoUrl, {
+
+console.log('🔄 Attempting to connect to MongoDB...')
+console.log('📍 Using:', mongoUrl.includes('mongodb+srv') ? 'MongoDB Atlas (SRV)' : mongoUrl.includes('mongodb://') ? 'MongoDB (Direct)' : 'Unknown')
+
+// Connection options
+const connectionOptions = {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
+}
+
+// Add SSL options for MongoDB Atlas
+if (mongoUrl.includes('mongodb+srv') || mongoUrl.includes('mongodb.net')) {
+  connectionOptions.ssl = true
+  connectionOptions.tls = true
+  connectionOptions.tlsAllowInvalidCertificates = false
+}
+
+mongoose.connect(mongoUrl, connectionOptions)
+  .then(() => {
+    console.log('✅ Successfully connected to MongoDB')
+    console.log('📊 Database:', mongoose.connection.name)
+    console.log('🔗 Host:', mongoose.connection.host)
+  })
+  .catch(err => {
+    console.error('❌ MongoDB connection error:', err.message)
+    console.error('📋 Error name:', err.name)
+    if (err.reason) {
+      console.error('📋 Reason:', err.reason)
+    }
+    console.error('💡 Troubleshooting:')
+    console.error('   1. Verify MONGODB_URI uses mongodb+srv:// format')
+    console.error('   2. Check username and password are correct')
+    console.error('   3. Ensure IP whitelist includes 0.0.0.0/0 in MongoDB Atlas')
+    console.error('   4. Verify database user has proper permissions')
+  })
+
+// Handle connection events
+mongoose.connection.on('error', err => {
+  console.error('❌ MongoDB runtime error:', err.message)
 })
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB connection error:', err))
+
+mongoose.connection.on('disconnected', () => {
+  console.log('⚠️ MongoDB disconnected')
+})
+
+mongoose.connection.on('reconnected', () => {
+  console.log('✅ MongoDB reconnected')
+})
 
 
 app.set('view engine', 'ejs')
@@ -51,7 +93,7 @@ app.get('/:shortUrl', async (req, res) => {
 })
 
 const PORT = process.env.PORT || 3000
-const HOST = '0.0.0.0' // Required for Render - listens on all network interfaces
+const HOST = '0.0.0.0'
 
 app.listen(PORT, HOST, () => {
   console.log(`🚀 Server is running on http://${HOST}:${PORT}`)
